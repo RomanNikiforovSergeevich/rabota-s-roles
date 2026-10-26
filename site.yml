@@ -1,0 +1,27 @@
+---
+- name: Install ClickHouse
+  hosts: clickhouse
+  become: true
+  roles:
+    - clickhouse
+
+- name: Install Vector
+  hosts: vector
+  become: true
+  roles:
+    - vector
+
+- name: Install and configure Lighthouse
+  hosts: lighthouse
+  become: true
+  roles:
+    - lighthouse
+  tasks:
+    - name: Verify Lighthouse is running
+      uri:
+        url: "http://localhost"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 5
+      delay: 2
