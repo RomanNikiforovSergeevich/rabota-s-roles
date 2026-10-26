@@ -1,0 +1,50 @@
+---
+- name: Install Nginx and unzip
+  apt:
+    name: [nginx, unzip]
+    state: present
+    update_cache: true
+
+- name: Download Lighthouse static files
+  get_url:
+    url: "{{ lighthouse_url }}"
+    dest: /tmp/lighthouse.zip
+    mode: "0644"
+
+- name: Unpack Lighthouse to web root
+  unarchive:
+    src: /tmp/lighthouse.zip
+    dest: "{{ lighthouse_web_root }}"
+    remote_src: true
+    creates: "{{ lighthouse_web_root }}/lighthouse-master"
+
+- name: Create symlink for nginx root
+  file:
+    src: "{{ lighthouse_web_root }}/lighthouse-master"
+    dest: "{{ lighthouse_symlink_path }}"
+    state: link
+
+- name: Configure Nginx for Lighthouse
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/lighthouse
+    mode: "0644"
+  notify: Restart Nginx
+
+- name: Enable Lighthouse site
+  file:
+    src: /etc/nginx/sites-available/lighthouse
+    dest: /etc/nginx/sites-enabled/lighthouse
+    state: link
+
+- name: Remove default Nginx site
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Restart Nginx
+
+- name: Ensure Nginx is running
+  service:
+    name: nginx
+    state: started
+    enabled: true
